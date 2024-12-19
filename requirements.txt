@@ -1,4 +1,5 @@
 aiohttp
 aiogram>=3.0.0
 emoji
+pandas
 google-generativeai
