@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import pickle
 import warnings
 warnings.filterwarnings(action='ignore')
@@ -23,4 +22,15 @@ from collections import defaultdict
 from collections import Counter
 ## Import necessary modules for content-based filtering
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+from typing import List, Dict, Any
+import json
+import google.generativeai as genai
+from google.ai.generativelanguage_v1beta.types import content
+import random
+import os
+import time
+
+from llm import LLM
+import config
 from sklearn.metrics.pairwise import linear_kernel
