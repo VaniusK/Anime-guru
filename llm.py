@@ -1,8 +1,4 @@
-import google.generativeai as genai
-from google.ai.generativelanguage_v1beta.types import content
-import os
-import time
-import config
+from imports import *
 GEMINI_API_KEY = os.environ['GEMINI_API_KEY']
 
 normal_config = {
