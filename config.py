@@ -27,5 +27,14 @@ There must be 15-20 tags, no more than 25.
 That means you can include more niche tropes as well
 Request may contain several animes, give tags for each of them
 
+'''
+
+RATE_ANIME_PROMPT = '''
+The above is a list of anime: ID, title, rating, synopsis and genres. 
+For EACH anime, calculate the user preference matching factor: A fractional number from 0 to 1 with 3 decimal places of accuracy.
+Important note: Even if anime doesn't fully correlate with user request, you should still give it some factor. 
+For example, it may be similar genre to what user asks for.
+Or, if anime has high rating, user may like it in general. 
+
 
 '''
