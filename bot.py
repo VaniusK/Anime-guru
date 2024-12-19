@@ -20,16 +20,16 @@ from aiogram import F
 from llm import LLM
 
 TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN']
-GEMINI_API_KEY = os.environ['GEMINI_API_KEY']
 
-model = LLM(GEMINI_API_KEY)
+
+model = LLM()
 
 telegram_bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 @dp.message()
-async def send_film(message: types.Message) -> None:
-    await message.reply(model.generate(f"{config.llm_prompt} {message.text}"))
+async def recommend_anime(message: types.Message) -> None:
+    await message.reply(await model.generate(f"{config.RECOMMENDATION_PROMPT} {message.text}"))
 
 
 async def main():
