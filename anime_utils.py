@@ -2,7 +2,7 @@ from imports import *
 
 model = LLM()
 
-anime_table = pd.read_csv("anime-dataset-2023-with-common-tags.csv")
+anime_table = pd.read_csv("anime-dataset-2023.csv")
 def gen_fich():
     return (item for item in (anime_table['Genres'] + ", " + anime_table['tags'] + ", " + anime_table['Type'] + ", " + anime_table['Studios'] + ", " + anime_table['Source']).values.astype('U'))
 
@@ -63,22 +63,21 @@ def get_content_based_recommendations(user_preferences: Dict[int, int], amount_t
     ranks = Counter()
     for similar in similars:
         for i in range(len(similar)):
-            ranks[similar[i]] -= i
+            ranks[similar[i]] -= 1 / (i + 1)
     ranked = list(ranks.keys())
     ranked = list(filter(lambda x: x not in viewed, ranked))
     ranked.sort(key=lambda x: ranks[x])
-    ranked.reverse()
     return ranked[:amount]
 
 
 
 
 #print(merge_anime_based_on_request([[1393], [0], [7428]], "Хочу что-нибудь про монстров"))
-'''
-animes = get_content_based_recommendations({988: 10, 3951: 10}, 5, 10)
+
+animes = get_content_based_recommendations({947: 10, 0: 10}, 5, 10)
 print(animes)
 for anime in animes:
-    print(anime_table.at[anime, "English name"], "\n", anime_table.at[anime, "Other name"], "\n", anime_table.at[anime, "Genres"], "\n", anime_table.at[anime, "tags"])
+    print(anime_table.at[anime, "English name"], "\n", anime_table.at[anime, "Genres"], "\n", anime_table.at[anime, "tags"])
 
-'''
+
 
