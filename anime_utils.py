@@ -1,5 +1,9 @@
 from imports import *
 
+users_refusals = {}
+with open('users_refusals.json', 'r') as file:
+    users_refusals = json.load(file)
+
 model = LLM()
 
 anime_table = pd.read_csv("anime-dataset-2023.csv")
@@ -11,9 +15,22 @@ tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix_generator = tfidf.fit_transform(gen_fich())
 
 cosine_sim_sparse = linear_kernel(tfidf_matrix_generator, tfidf_matrix_generator)
-def merge_anime_based_on_request(anime_lists: List[List[int]], request: str) -> List[int]:
+
+def calculate_dropout_rate(user_id, anime_id):
+    if user_id not in users_refusals:
+        return 0
+    if anime_id not in users_refusals[user_id]:
+        return 0
+    time_passed = time.time() - users_refusals[user_id][anime_id][0]
+    refusals_amount = users_refusals[user_id][anime_id][1]
+    return 1 - (0.8 ** (refusals_amount / (1 + time_passed / (60 * 60 * 24))))
+
+def merge_anime_based_on_request(anime_lists: List[List[int]], request: str, user_id: int) -> List[int]:
     merged_list = []
+    for i in range(len(anime_lists)):
+        anime_lists[i] = list(filter(lambda x: calculate_dropout_rate(user_id, x) <= random.random(), anime_lists[i]))
     for anime_list in anime_lists:
+
         merged_list += anime_list
     json_list = []
     for anime_id in merged_list:
@@ -67,17 +84,17 @@ def get_content_based_recommendations(user_preferences: Dict[int, int], amount_t
     ranked = list(ranks.keys())
     ranked = list(filter(lambda x: x not in viewed, ranked))
     ranked.sort(key=lambda x: ranks[x])
+
     return ranked[:amount]
 
 
 
-
-#print(merge_anime_based_on_request([[1393], [0], [7428]], "Хочу что-нибудь про монстров"))
-
+'''
+print(merge_anime_based_on_request([[1393], [0], [7428]], "Хочу что-нибудь про космос", 0))
+exit()
 animes = get_content_based_recommendations({947: 10, 0: 10}, 5, 10)
-print(animes)
 for anime in animes:
     print(anime_table.at[anime, "English name"], "\n", anime_table.at[anime, "Genres"], "\n", anime_table.at[anime, "tags"])
-
+'''
 
 
