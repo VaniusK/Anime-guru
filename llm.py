@@ -11,7 +11,7 @@ normal_config = {
 mutli_tags_config = {
   "temperature": 1,
   "top_p": 0.95,
-  "top_k": 64,
+  "top_k": 40,
   "max_output_tokens": 8192,
   "response_schema": content.Schema(
     type = content.Type.OBJECT,
@@ -41,7 +41,7 @@ mutli_tags_config = {
 multi_anime_config = {
   "temperature": 1,
   "top_p": 0.95,
-  "top_k": 64,
+  "top_k": 40,
   "max_output_tokens": 8192,
   "response_schema": content.Schema(
     type = content.Type.OBJECT,
@@ -78,7 +78,7 @@ class LLM:
 
     async def generate(self, prompt):
         self.model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.0-flash-exp",
             generation_config=normal_config,
         )
         while True:
@@ -91,7 +91,7 @@ class LLM:
 
     def generate_multi_tags(self, anime_list):
         self.model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.0-flash-exp",
             generation_config=mutli_tags_config,
         )
         prompt = ""
@@ -109,7 +109,7 @@ class LLM:
 
     def rate_multi_anime_by_request(self, anime_list, request):
         self.model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.0-flash-exp",
             generation_config=multi_anime_config,
         )
         prompt = ""
