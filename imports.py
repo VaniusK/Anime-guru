@@ -30,7 +30,7 @@ from google.ai.generativelanguage_v1beta.types import content
 import random
 import os
 import time
-
-from llm import LLM
-import config
 from sklearn.metrics.pairwise import linear_kernel
+
+import config
+from llm import LLM
