@@ -24,6 +24,8 @@ sz = len(df["Name"])
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
+
+
 user_rate_anime = dict() # Словарь, содержащий какую оценку пользователь поставил аниме(по ID)
 user_watching = dict() # Словарь, содержащий какие аниме(по айди) сейчас смотрит пользователь
 user_info = dict() # Словарь, содержащий информацию о пользователе(возраст, смотрел ли аниме или нет)
@@ -46,6 +48,7 @@ phrase= {
 # 10 - состояние оценки аниме, добавленного в лист
 # 11 - продолжать вводить аниме для добавления или нет
 # 12 - пользователь выбирает, нравится ли ему первое предложенное аниме
+# 13 - пользователь выбирает одно из других предложенных, либо же отмена
 
 
 # inline кнопки 
@@ -70,10 +73,6 @@ inline_list3 = [
     [InlineKeyboardButton(text="Нет", callback_data="no")]
 ]
 keyboard3 = InlineKeyboardMarkup(inline_keyboard=inline_list3)
-
-df = pd.read_csv("anime-dataset-2023.csv")
-name = df['English name']
-sz = len(df["Name"])
 
 # Находит наиболее похожую строку
 async def find_closest_name(a):
@@ -150,7 +149,7 @@ async def send_welcome(message):
         state_user[user_id] = 1
         user_info[user_id] = dict() 
         user_rate_anime[user_id] = dict()
-        user_watching[user_id] = dict()
+        user_watching[user_id] = list()
         cur_anime[user_id] = -1
         cur_ls[user_id] = []
     tip = text(
@@ -170,7 +169,9 @@ async def send_help(message):
     tip = text(
         '/suggest_anime - предложить аниме',
         '\n/add_anime - добавить аниме в список просмотренных',
+        '\n/add_watching_anime - добавить аниме в список смотрю сейчас',
         '\n/show_watched_anime - показать просмотренные аниме',
+        '\n/show_watching_anime - показать список аниме, которые смотрю сейчас',
         '\n/start - старт', 
         '\n/help - о командах', 
         '\n/info - о проекте',
@@ -178,6 +179,15 @@ async def send_help(message):
         '\n/fill_form - заполнить форму'
     )
     await message.reply(tip)
+
+@dp.message(Command(commands=['show_watching_anime']))
+async def show_watching_anime(message):
+    user_id = message.from_user.id
+    ls = ""
+    ls += "Список аниме, который Вы сейчас смотрите:"
+    for i in user_watching[user_id]:
+        ls += f'\n{name[i]}'
+    await message.reply(ls)
 
 @dp.message(Command(commands=['add_anime']))
 async def add_anime(message):
@@ -228,7 +238,6 @@ async def send_anime(message):
             state_user[user_id] = 12
             cur_ls[user_id] = ls
             await bot.send_photo(user_id, photo=df["Image URL"][ls[0]], caption=f'Устраивает ли вас:{name[ls[0]]}?', reply_markup=keyboard3)
-
     else:
         await bot.delete_message(message.chat.id, message.message_id)
 
@@ -253,7 +262,7 @@ async def process_callback_fill_button(message):
             await bot.send_message(user_id, "Смотрели ли вы аниме?", reply_markup=keyboard3)
         else:
             state_user[user_id] = 4
-            await bot.send_message(user_id, "Просим вас написать пару названий аниме и оценку к ним\n", reply_markup=keyboard2)
+            await bot.send_message(user_id, "Просим вас написать пару названий аниме и оценку к ним\nВводите названия по одному", reply_markup=keyboard2)
     else:
         await bot.delete_message(message.chat.id, message.message_id)
 
@@ -304,6 +313,19 @@ async def process_states(message):
     else:
         await bot.send_message(user_id, 'Просим вас использовать команды\n/help')
 
+@dp.callback_query(lambda c: c.data.startswith('choice'))
+async def process_callback_choice(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+
+    print("here we came")
+    print(callback_query.data)
+    if state_user[user_id] == 13:
+        ind = int(callback_query.data[callback_query.data.find(":") + 1:])
+        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы выбрали:{name[ind]}\nОтличный выбор! Добавим в список смотрю сейчас')
+        user_watching[user_id].append(ind)
+        state_user[user_id] = 1
+        
+
 
 @dp.callback_query(lambda c: c.data == 'yes')
 async def process_callback_fill_button(callback_query: types.CallbackQuery):
@@ -329,9 +351,10 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
         await bot.send_message(user_id, "Тогда просим вводить названия аниме дальше")
         state_user[user_id] = 8
     elif state_user[user_id] == 12:
-        await bot.send_message(user_id, "Рады, что смогли помочь")
+        ind = cur_ls[user_id][0]
+        await bot.send_message(user_id, f"Рады, что смогли помочь.\n{name[ind]} добавлено в список смотрю сейчас")
+        user_watching[user_id].append(ind)
         state_user[user_id] = 1
-        cur_ls[user_id] = []
 
 
 @dp.callback_query(lambda c: c.data == 'no')
@@ -363,12 +386,14 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
     elif state_user[user_id] == 12:
         ls = cur_ls[user_id]
         inline_list = [
-                [InlineKeyboardButton(text=name[ls[1]], callback_data=str(ls[1]))], 
-                [InlineKeyboardButton(text=name[ls[2]], callback_data=str(ls[2]))],
-                [InlineKeyboardButton(text=name[ls[3]], callback_data=str(ls[3]))]
+                [InlineKeyboardButton(text=name[ls[1]], callback_data=f'choice:{ls[1]}')], 
+                [InlineKeyboardButton(text=name[ls[2]], callback_data=f'choice:{ls[2]}')],
+                [InlineKeyboardButton(text=name[ls[3]], callback_data=f'choice:{ls[3]}')],
+                [InlineKeyboardButton(text="Нет ничего подходящего", callback_data="cancel")],
             ]
         keyboard = InlineKeyboardMarkup(inline_keyboard=inline_list)  
         await bot.send_message(user_id, "Может вас устроит что-нибудь из этого?", reply_markup=keyboard)
+        state_user[user_id] = 13
 
 
 @dp.callback_query(lambda c: c.data == 'cancel')
@@ -378,6 +403,8 @@ async def process_callback_stop_button(callback_query: types.CallbackQuery):
     await bot.delete_message(callback_query.message.chat.id, callback_query.message.message_id)
     if user_id in state_user and (state_user[user_id] == 2 or state_user[user_id] == 4):
         await bot.send_message(user_id, "Вы прекратили заполнение формы")
+    if state_user[user_id] == 13:
+        await bot.send_message(user_id, "Очень жаль, что мы не смогли вам помочь(")
     state_user[user_id] = 1
     
 
