@@ -1,8 +1,26 @@
-from imports import *
-# Привет
-# Прив
+from aiogram import Bot, types
+from aiogram import Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.utils.markdown import bold, code, italic, text
+from aiogram.enums.parse_mode import ParseMode
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import CommandStart, Command
+from aiogram import F
+from random import randint
+import pandas as pd
 
-BOT_TOKEN = os.environ["TELEGRAM_TOKEN"]
+
+import config
+
+
+BOT_TOKEN = ""
+
+# data_manager.load_data()
+# df = data_manager.anime_table
+df = pd.read_csv("dataset.csv")
+name = df['English name']
+sz = len(df["Name"])
+
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
