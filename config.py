@@ -36,5 +36,4 @@ Important note: Even if anime doesn't fully correlate with user request, you sho
 For example, it may be similar genre to what user asks for.
 Or, if anime has high rating, user may like it in general. 
 
-
 '''
