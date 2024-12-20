@@ -19,7 +19,7 @@ from aiogram import F
 import pandas as pd
 from random import randint
 
-BOT_TOKEN = "6770332647:AAFcriPWWUFf09HFfkBby9f40JqfFY_UWmg"
+BOT_TOKEN = ""
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
