@@ -1,25 +1,6 @@
-from urllib.parse import urljoin
-import os
-import subprocess
-import time
-import speech_recognition as sr
-import typing as tp
-from emoji import emojize
-from aiohttp import ClientSession
-import asyncio
+from imports import *
 
-from aiogram import Bot, types
-from aiogram import Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.utils.markdown import bold, code, italic, text
-from aiogram.enums.parse_mode import ParseMode
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import CommandStart, Command
-from aiogram import F
-import pandas as pd
-from random import randint
-
-BOT_TOKEN = ""
+BOT_TOKEN = os.environ["TELEGRAM_TOKEN"]
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -69,7 +50,7 @@ inline_list3 = [
 ]
 keyboard3 = InlineKeyboardMarkup(inline_keyboard=inline_list3)
 
-df = pd.read_csv("C:/Users/Dinislam/Desktop/anime-guru bot/dataset.csv")
+df = pd.read_csv("anime-dataset-2023.csv")
 name = df['English name']
 sz = len(df["Name"])
 
@@ -309,7 +290,7 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
     if state_user[user_id] == 3:
         tip = text(
             "Отлично!", 
-            "\nВ таком случае попросим Вас написать несколько названий аниме и вашу оценку к ним", 
+            "\nВ таком случае попросим Вас название одного из аниме, которые Вы смотрели",
             "\nЧем больше мы узнаем, тем легче нам будет подобрать аниме под Вас"
         )
         user_info[user_id]['watched_anime'] = True
@@ -381,4 +362,5 @@ async def process_callback_stop_button(callback_query: types.CallbackQuery):
 
 
 if __name__ == '__main__':
+    print("Started bot")
     dp.run_polling(bot)
