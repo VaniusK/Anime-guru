@@ -1,9 +1,5 @@
 from imports import *
 
-users_refusals = {}
-with open('users_refusals.json', 'r') as file:
-    users_refusals = json.load(file)
-
 model = LLM()
 
 anime_table = pd.read_csv("anime-dataset-2023.csv")

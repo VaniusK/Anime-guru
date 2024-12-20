@@ -31,6 +31,16 @@ import random
 import os
 import time
 from sklearn.metrics.pairwise import linear_kernel
+from aiogram import Bot, types
+from aiogram import Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.utils.markdown import bold, code, italic, text
+from aiogram.enums.parse_mode import ParseMode
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import CommandStart, Command
+from aiogram import F
+from random import randint
 
 import config
 from llm import LLM
+import data_manager

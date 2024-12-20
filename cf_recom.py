@@ -1,10 +1,13 @@
 from imports import *
 
+anime_table = pd.read_csv("anime-dataset-2023.csv")
+users_score_table = pd.read_csv("users-score-2023.csv")
+
 def RecommenderNet(num_users, num_animes, embedding_size=128):
     # User input layer and embedding layer
     user = Input(name='user_encoded', shape=[1])
     user_embedding = Embedding(name='user_embedding', input_dim=num_users, output_dim=embedding_size)(user)
-    
+
     # Anime input layer and embedding layer
     anime = Input(name='anime_encoded', shape=[1])
     anime_embedding = Embedding(name='anime_embedding', input_dim=num_animes, output_dim=embedding_size)(anime)
@@ -77,25 +80,10 @@ def get_user_preferences(user_id, df, df_anime, plot=False, verbose=0):
     
     anime_df_rows = df_anime[df_anime["anime_id"].isin(top_animes_user)]
     anime_df_rows = anime_df_rows[["Name", "Genres"]]
-    
-    if verbose != 0:
-        print("User \033[1m{}\033[0m has watched {} anime(s) with an average rating of {:.1f}/10\n".format(
-            user_id, len(animes_watched_by_user), animes_watched_by_user['rating'].mean()
-        ))
-        print('\033[1m----- Preferred genres----- \033[0m\n')
 
-    if plot:
-        genres_list = []
-        for genres in anime_df_rows['Genres']:
-            if isinstance(genres, str):
-                for genre in genres.split(','):
-                    genres_list.append(genre.strip())
-
-        #showWordCloud(dict(Counter(genres_list)))
-    
     return anime_df_rows
 
-def get_recommended_animes(similar_users, user_pref, df, df_anime, n=10):
+def get_recommended_animes(similar_users, user_pref, df, df_anime, n=10) -> List[int]:
     recommended_animes = []
     anime_list = []
     
@@ -107,32 +95,19 @@ def get_recommended_animes(similar_users, user_pref, df, df_anime, n=10):
             
     if len(anime_list) == 0:
         print("No anime recommendations available for the given users.")
-        return pd.DataFrame()
+        return []
     
     anime_list = pd.DataFrame(anime_list)
     sorted_list = pd.DataFrame(pd.Series(anime_list.values.ravel()).value_counts()).head(n)
-    # Count the occurrences of each anime in the entire dataset
-    anime_count = df['anime_id'].value_counts()
     
     for i, anime_name in enumerate(sorted_list.index):
         if isinstance(anime_name, str):
             try:
-                anime_id = df_anime[df_anime.Name == anime_name].anime_id.values[0]
-                english_name = df_anime[df_anime['Name'] == anime_name]['English name'].values[0]
-                name = english_name if english_name != "UNKNOWN" else anime_name
-                genre = df_anime[df_anime.Name == anime_name].Genres.values[0]
-                Synopsis = df_anime[df_anime.Name == anime_name].Synopsis.values[0]
-                n_user_pref = anime_count.get(anime_id, 0)  # Get the total count of users who have watched this anime
-                recommended_animes.append({
-                    "anime_id" : anime_id,
-                    "n": n_user_pref,
-                    "anime_name": anime_name, 
-                    "Genres": genre, 
-                    "Synopsis": Synopsis
-                })
+                id = df_anime[df_anime.Name == anime_name].anime_id.values[0]
+                recommended_animes.append(id)
             except:
                 pass
-    return pd.DataFrame(recommended_animes)
+    return recommended_animes
 
 def cf_get_rec(user_id, df_us, df_an, path_model):
     df = df_us
@@ -153,31 +128,27 @@ def cf_get_rec(user_id, df_us, df_an, path_model):
     num_animes = len(anime_encoder.classes_)
 
     model = RecommenderNet(num_users, num_animes)
-    model.load_weights(path_model)
-
-    # Printing dataset information
-    print("Number of unique users: {}, Number of unique anime: {}".format(num_users, num_animes))
-    print("Minimum rating: {}, Maximum rating: {}".format(min(df['rating']), max(df['rating']))) 
+    #TODO: Раскомментить
+    #model.load_weights(path_model)
     
     # Extract weights for anime embeddings
     anime_weights = extract_weights('anime_embedding', model)
     # Extract weights for user embeddings
     user_weights = extract_weights('user_embedding', model)
     df_anime = df_an
-    popularity_threshold = 50
-    df_anime= df_anime.query('Members >= @popularity_threshold')
-    
-    random_user = user_id
+
     # Find similar users to the random user
-    similar_users = find_similar_users(random_user, user_encoder,  user_weights, n=10, neg=False)
+    similar_users = find_similar_users(user_id, user_encoder,  user_weights, n=10, neg=False)
     print(similar_users)
     similar_users = similar_users[similar_users.similarity > 0.4]
-    similar_users = similar_users[similar_users.similar_users != random_user]
+    similar_users = similar_users[similar_users.similar_users != user_id]
 
-    user_pref = get_user_preferences(random_user, df_us, df_an, plot=True, verbose=1)
+    user_pref = get_user_preferences(user_id, df_us, df_an, plot=True, verbose=0)
 
     # Get recommended animes for the random user
     recommended_animes = get_recommended_animes(similar_users, user_pref, df_us, df_an, n=10)
     
-    print('\n> Top recommendations for user: {}'.format(random_user))
+    print('\n> Top recommendations for user: {}'.format(user_id))
     return recommended_animes
+
+cf_get_rec(1, users_score_table, anime_table, "" )
