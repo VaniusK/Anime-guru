@@ -1,5 +1,11 @@
-aiohttp
+aiohttp~=3.10.11
 aiogram>=3.0.0
-emoji
-pandas
+emoji~=2.14.0
+pandas~=2.2.3
 google-generativeai
+SpeechRecognition~=3.12.0
+numpy~=2.0.2
+tensorflow~=2.18.0
+protobuf~=5.29.1
+scikit-learn~=1.6.0
+gdown~=5.2.0
