@@ -40,6 +40,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import CommandStart, Command
 from aiogram import F
 from random import randint
+import atexit
 
 import config
 from llm import LLM

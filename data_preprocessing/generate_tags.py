@@ -1,20 +1,12 @@
-import pandas as pd
-import aiohttp
-import asyncio
-import time
-from llm import LLM
-import config
-from collections import Counter
-import json
-
+from imports import *
 model = LLM()
 
 all_tags = Counter()
 available_tags = set()
 
 def clean_tags(tags):
-    tags = tags.split(", ")[:-1]
     tags = [x.lower() for x in tags]
+    tags = list(map(lambda x: x.replace("-", ""), tags))
     for i in range(len(tags)):
         if tags[i][0] == ' ':
             tags[i] = tags[i][1:]
@@ -22,32 +14,33 @@ def clean_tags(tags):
             tags[i] = tags[i][:-1]
     return tags
 
-cnt = 0
 
-async def get_description_by_id(id):
-    global available_tags
-    global cnt
-    while True:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f'https://api.jikan.moe/v4/anime/{id}/full') as response:
-                if response.status == 404:
-                    return []
-                if response.status != 200:
-                    time.sleep(0.01)
-                    continue
-                json = await response.json()
-                synopsis = json['data']['synopsis']
-                if synopsis == None:
-                    synopsis = "Description in unavailable"
-                if '[' in synopsis:
-                    synopsis = synopsis[:synopsis.find('[')]
-                return synopsis
+anime_table = pd.read_csv("anime-dataset-2023-2.csv")
+k = 10
+anime_list = []
+print("started")
 
-anime_table = pd.read_csv("anime-dataset-2023-with-tags.csv")
-if not 'tags' in anime_table.columns:
-    anime_table['tags'] = None
+'''
 
-k = 50
+for i in range(0, len(anime_table)):
+    anime_table.at[i, "tags"] = eval(anime_table.at[i, "tags"])
+    if anime_table.at[i, "Synopsis"] == "UNKNOWN":
+        anime_table.at[i, "tags"] = []
+anime_table.to_csv("anime-dataset-2023-2.csv")
+
+
+
+for i in range(0, len(anime_table)):
+    anime_list.append([i, anime_table.at[i, "English name"], anime_table.at[i, "Synopsis"]])
+    if len(anime_list) == k or i == len(anime_table) - 1:
+        response = json.loads(model.generate_multi_tags(anime_list))['response']
+        for anime in response:
+            anime_table.at[anime['anime_id'], "tags"] = clean_tags(anime['tags'])
+            print(clean_tags(anime['tags']))
+        anime_list = []
+        print(i)
+'''
+
 
 for i in range(0, len(anime_table)):
 
@@ -69,4 +62,4 @@ for i in range(0, len(anime_table)):
         if [all_tags[tag], tag] in l:
             new_tags.append(tag)
     anime_table.at[i, 'tags'] = new_tags
-anime_table.to_csv("anime-dataset-2023-with-common-tags.csv")
+anime_table.to_csv("anime-dataset-2023-3.csv")
