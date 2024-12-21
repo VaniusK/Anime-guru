@@ -1,8 +1,12 @@
 from imports import *
+import data_manager
+data_manager.load_data()
+users_refusals = data_manager.users_refusals
 
 model = LLM()
+start_time = time.time()
 
-anime_table = pd.read_csv("anime-dataset-2023.csv")
+anime_table = data_manager.anime_table
 def gen_fich():
     return (item for item in (anime_table['Genres'] + ", " + anime_table['tags'] + ", " + anime_table['Type'] + ", " + anime_table['Studios'] + ", " + anime_table['Source']).values.astype('U'))
 
@@ -11,6 +15,7 @@ tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix_generator = tfidf.fit_transform(gen_fich())
 
 cosine_sim_sparse = linear_kernel(tfidf_matrix_generator, tfidf_matrix_generator)
+print(time.time() - start_time)
 
 def calculate_dropout_rate(user_id, anime_id):
     if user_id not in users_refusals:
@@ -85,12 +90,12 @@ def get_content_based_recommendations(user_preferences: Dict[int, int], amount_t
 
 
 
-'''
-print(merge_anime_based_on_request([[1393], [0], [7428]], "Хочу что-нибудь про космос", 0))
-exit()
-animes = get_content_based_recommendations({947: 10, 0: 10}, 5, 10)
+
+#print(merge_anime_based_on_request([[1393], [0], [7428]], "Хочу что-нибудь про космос", 0))
+start_time = time.time()
+animes = get_content_based_recommendations({947: 10, 3533: 10}, 5, 20)
 for anime in animes:
     print(anime_table.at[anime, "English name"], "\n", anime_table.at[anime, "Genres"], "\n", anime_table.at[anime, "tags"])
-'''
 
+print(time.time() - start_time)
 

@@ -5,7 +5,7 @@ users_refusals = -1
 
 def load_data():
     global anime_table, users_refusals
-    pd.read_csv("anime-dataset-2023.csv")
+    anime_table = pd.read_csv("anime-dataset-2023.csv")
     with open('users_refusals.json', 'r') as file:
         users_refusals = json.load(file)
 

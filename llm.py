@@ -86,7 +86,6 @@ class LLM:
                 response = self.model.generate_content(prompt)
                 return response.text
             except Exception as e:
-                print(e)
                 time.sleep(0.01)
 
     def generate_multi_tags(self, anime_list):
