@@ -1,38 +1,23 @@
-from aiogram import Bot, types
-from aiogram import Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.utils.markdown import bold, code, italic, text
-from aiogram.enums.parse_mode import ParseMode
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import CommandStart, Command
-from aiogram import F
-from random import randint
-import pandas as pd
+import data_manager
+import recommendations
+from imports import *
 
+BOT_TOKEN = os.environ['TELEGRAM_TOKEN']
 
-import config
-
-
-BOT_TOKEN = ""
-
-# data_manager.load_data()
-# df = data_manager.anime_table
-df = pd.read_csv("dataset.csv")
+df = data_manager.anime_table
 name = df['English name']
 sz = len(df["Name"])
-
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-
-user_rate_anime = dict() # Словарь, содержащий какую оценку пользователь поставил аниме(по ID)
-user_watching = dict() # Словарь, содержащий какие аниме(по айди) сейчас смотрит пользователь
-user_info = dict() # Словарь, содержащий информацию о пользователе(возраст, смотрел ли аниме или нет)
-cur_anime = dict() # Словарь, какое аниме сейчас оценивает пользователь
-state_user = dict() # Словарь, содержащий состояние пользователя
-cur_ls = dict()
-phrase= {
+user_rate_anime = data_manager.users_watched_anime  # Словарь, содержащий какую оценку пользователь поставил аниме(по ID)
+user_watching = data_manager.users_watching  # Словарь, содержащий какие аниме(по айди) сейчас смотрит пользователь
+user_info = data_manager.users_info # Словарь, содержащий информацию о пользователе(возраст, смотрел ли аниме или нет)
+cur_anime = data_manager.cur_anime  # Словарь, какое аниме сейчас оценивает пользователь
+state_user = data_manager.state_user  # Словарь, содержащий состояние пользователя
+cur_ls = data_manager.cur_ls
+phrase = {
     "your_age": ""
 }
 
@@ -57,28 +42,29 @@ phrase= {
 # 19 - уверены ли вы, что хотите сбросить инфу о себе
 
 
-# inline кнопки 
-# Выбор 
+# inline кнопки
+# Выбор
 inline_list1 = [
-        [InlineKeyboardButton(text="Заполнить форму", callback_data="fill_form")],
-        [InlineKeyboardButton(text="Написать о себе", callback_data="about_user")],
-        [InlineKeyboardButton(text="Добавить свой список аниме", callback_data="add_list")],
-        [InlineKeyboardButton(text="Отмена", callback_data="cancel")]
-    ]
+    [InlineKeyboardButton(text="Заполнить форму", callback_data="fill_form")],
+    [InlineKeyboardButton(text="Написать о себе", callback_data="about_user")],
+    [InlineKeyboardButton(text="Добавить свой список аниме", callback_data="add_list")],
+    [InlineKeyboardButton(text="Отмена", callback_data="cancel")]
+]
 keyboard1 = InlineKeyboardMarkup(inline_keyboard=inline_list1)
 
 # Кнопки заполнения формы
 inline_list2 = [
-        [InlineKeyboardButton(text="Прекратить", callback_data="cancel")]
-    ]
+    [InlineKeyboardButton(text="Прекратить", callback_data="cancel")]
+]
 keyboard2 = InlineKeyboardMarkup(inline_keyboard=inline_list2)
 
 # да или нет
 inline_list3 = [
-    [InlineKeyboardButton(text="Да", callback_data="yes")], 
+    [InlineKeyboardButton(text="Да", callback_data="yes")],
     [InlineKeyboardButton(text="Нет", callback_data="no")]
 ]
 keyboard3 = InlineKeyboardMarkup(inline_keyboard=inline_list3)
+
 
 # Находит наиболее похожую строку
 async def find_closest_name(a):
@@ -142,8 +128,8 @@ async def choose_option(user_id):
     print(f'user{user_id} is choosing option')
     state_user[user_id] = 7
     tip = text(
-            'Для того, чтобы нам было легче подобрать аниме под Вас, просим выбрать один из вариантов ниже'
-        )
+        'Для того, чтобы нам было легче подобрать аниме под Вас, просим выбрать один из вариантов ниже'
+    )
     await bot.send_message(user_id, tip, reply_markup=keyboard1)
 
 
@@ -201,7 +187,8 @@ async def process_delete_watched_anime(message):
     user_id = message.from_user.id
     text = message.text
     if text.find('#') == -1 or not (text[text.find('#') + 1:].strip().isdigit()):
-        await message.reply("Вводите команду в формате:\n/delete_watched_anime #(порядковый номер аниме в списке просмотренных)")
+        await message.reply(
+            "Вводите команду в формате:\n/delete_watched_anime #(порядковый номер аниме в списке просмотренных)")
     else:
         ind = int(text[text.find('#') + 1:].strip())
         ls = dict()
@@ -220,7 +207,8 @@ async def process_delete_watching_anime(message):
     user_id = message.from_user.id
     text = message.text
     if text.find('#') == -1 or not (text[text.find('#') + 1:].strip().isdigit()):
-        await message.reply("Вводите команду в формате:\n/delete_watching_anime #(порядковый номер аниме в списке смотрю сейчас)")
+        await message.reply(
+            "Вводите команду в формате:\n/delete_watching_anime #(порядковый номер аниме в списке смотрю сейчас)")
     else:
         ind = int(text[text.find('#') + 1:].strip())
         ls = []
@@ -242,13 +230,13 @@ async def process_random(message):
         genres = df['Genres'][ind]
         cur_anime[user_id] = ind
         tip = text(f'Рандомное аниме:{name[ind]}',
-                f'\n\nЖанры:{df["Genres"][ind]}', 
-                f'\n\nВозрастной рейтинг: {df["Rating"][ind]}',
-                f'\n\nРейтинг: {df["Score"][ind]}', 
-                f'\n\nПродюссер: {df["Producers"][ind]}',
-                f'\n\nОписание: {df["Synopsis"][ind][0:min(145, len(df["Synopsis"][ind]))]}...', 
-                f'\n\nДобавить в список смотрю сейчас?'
-        )
+                   f'\n\nЖанры:{df["Genres"][ind]}',
+                   f'\n\nВозрастной рейтинг: {df["Rating"][ind]}',
+                   f'\n\nРейтинг: {df["Score"][ind]}',
+                   f'\n\nПродюссер: {df["Producers"][ind]}',
+                   f'\n\nОписание: {df["Synopsis"][ind][0:min(145, len(df["Synopsis"][ind]))]}...',
+                   f'\n\nДобавить в список смотрю сейчас?'
+                   )
         await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=tip, reply_markup=keyboard3)
         state_user[user_id] = 18
     else:
@@ -258,23 +246,24 @@ async def process_random(message):
 @dp.message(Command(commands=['start']))
 async def send_welcome(message):
     user_id = message.from_user.id
-    print(f'{user_id} воспользовался командой /start') 
+    print(f'{user_id} воспользовался командой /start')
     if not user_id in state_user:
         state_user[user_id] = 1
-        user_info[user_id] = dict() 
+        user_info[user_id] = dict()
         user_rate_anime[user_id] = dict()
         user_watching[user_id] = list()
         cur_anime[user_id] = -1
         cur_ls[user_id] = []
     tip = text(
-        'Привет!', 
+        'Привет!',
         '\nАниме-гуру бот поможет Вам с подбором аниме в зависимости от ваших предпочтений',
-        '\nДля того, чтобы бот посоветовал аниме, используйте команду', 
-        '\n/suggest_anime', 
+        '\nДля того, чтобы бот посоветовал аниме, используйте команду',
+        '\n/suggest_anime',
         '\nПомощь по командам',
-        '\n/help'  
-        )
+        '\n/help'
+    )
     await message.reply(tip)
+
 
 @dp.message(Command(commands=['stop']))
 async def stop(message):
@@ -288,18 +277,18 @@ async def send_help(message):
     print(f'{user_id} воспользовался командой /help')
     tip = text(
         '/suggest_anime - предложить аниме',
-        '\n/random - выдать рандомное аниме', 
+        '\n/random - выдать рандомное аниме',
         '\n/add_anime - добавить аниме в список просмотренных',
         '\n/add_watching_anime - добавить аниме в список смотрю сейчас',
         '\n/show_watched_anime - показать просмотренные аниме',
         '\n/show_watching_anime - показать список аниме, которые смотрю сейчас',
         '\n/delete_watching_anime - удалить аниме из списка смотрю сейчас',
         '\n/delete_watched_anime - удалить аниме из списка просмотренных',
-        '\n/start - старт', 
-        '\n/help - о командах', 
+        '\n/start - старт',
+        '\n/help - о командах',
         '\n/info - о проекте',
-        '\n/reset - сбросить информацию о себе', 
-        '\n/fill_form - заполнить форму', 
+        '\n/reset - сбросить информацию о себе',
+        '\n/fill_form - заполнить форму',
         '\n/stop - прекратить(если что-то пошло не так)'
     )
     await message.reply(tip)
@@ -310,36 +299,36 @@ async def send_info(message):
     user_id = message.from_user.id
     print(f'{user_id} воспользовался командой /info')
     info = text(
-    'В рамках проекта разработан telegram-бот, в общении',
-    '\nс которым можно получить рекомендации для',
-    '\nвыбора аниме согласно своим предпочтениям.',
-    '\nРеализация включает в себя разработку непосредственно',
-    '\ntelegram-бота с помощью API; изучение и анализ данных;',
-    '\nвыбор и реализация алгоритма рекомендаций.',
-    '\nВ ходе работы предстояло справиться с инфраструктурными' ,
-    '\nвызовами и трудностями построения рекомендательных систем:', 
-    '\nхолодным стартом, глобальной популярностью, устареванием контента и др.'
+        'В рамках проекта разработан telegram-бот, в общении',
+        '\nс которым можно получить рекомендации для',
+        '\nвыбора аниме согласно своим предпочтениям.',
+        '\nРеализация включает в себя разработку непосредственно',
+        '\ntelegram-бота с помощью API; изучение и анализ данных;',
+        '\nвыбор и реализация алгоритма рекомендаций.',
+        '\nВ ходе работы предстояло справиться с инфраструктурными',
+        '\nвызовами и трудностями построения рекомендательных систем:',
+        '\nхолодным стартом, глобальной популярностью, устареванием контента и др.'
     )
     await message.reply(info)
+
 
 @dp.message(Command(commands=['suggest_anime']))
 async def send_anime(message):
     user_id = message.from_user.id
     if state_user[user_id] == 1:
         if len(user_rate_anime[user_id]) < 1:
-            await bot.send_message(user_id, "У нас мало информации о Вас, поэтому просим\nзаполнить форму, либо же добавить аниме\n/fill_form\n/add_anime")
+            await bot.send_message(user_id,
+                                   "У нас мало информации о Вас, поэтому просим\nзаполнить форму, либо же добавить аниме\n/fill_form\n/add_anime")
         else:
-            ls = []
-            for i in range(4):
-                ls.append(randint(0, 5000))
+            ls = recommendations.get_recommendations(user_id, "")
             state_user[user_id] = 12
             cur_ls[user_id] = ls
             ind = ls[0]
             tip = text(
                 f'Устраивает ли вас:{name[ind]}?'
-                f'\n\nЖанры:{df["Genres"][ind]}', 
+                f'\n\nЖанры:{df["Genres"][ind]}',
                 f'\n\nВозрастной рейтинг: {df["Rating"][ind]}',
-                f'\n\nРейтинг: {df["Score"][ind]}', 
+                f'\n\nРейтинг: {df["Score"][ind]}',
                 f'\n\nПродюссер: {df["Producers"][ind]}',
                 f'\n\nОписание: {df["Synopsis"][ind][0:min(145, len(df["Synopsis"][ind]))]}...'
             )
@@ -347,12 +336,13 @@ async def send_anime(message):
     else:
         await bot.delete_message(message.chat.id, message.message_id)
 
+
 @dp.message(Command(commands=['reset']))
 async def process_callback_fill_button(message):
     user_id = message.from_user.id
     state_user[user_id] = 19
-    await message.reply("Вы уверены, что хотите сбросить информацию о себе?\nВсе ваши списки очистятся", reply_markup=keyboard3)
-    
+    await message.reply("Вы уверены, что хотите сбросить информацию о себе?\nВсе ваши списки очистятся",
+                        reply_markup=keyboard3)
 
 
 @dp.message(Command(commands=['fill_form']))
@@ -374,10 +364,11 @@ async def process_callback_fill_button(message):
             await bot.send_message(user_id, "Смотрели ли вы аниме?", reply_markup=keyboard3)
         else:
             state_user[user_id] = 4
-            await bot.send_message(user_id, "Просим вас написать пару названий аниме и оценку к ним\nВводите названия по одному", reply_markup=keyboard2)
+            await bot.send_message(user_id,
+                                   "Просим вас написать пару названий аниме и оценку к ним\nВводите названия по одному",
+                                   reply_markup=keyboard2)
     else:
         await bot.delete_message(message.chat.id, message.message_id)
-
 
 
 @dp.message(F.text)
@@ -392,7 +383,7 @@ async def process_states(message):
             state_user[user_id] = 3
             user_info[user_id]['age'] = int(text)
             await bot.send_message(user_id, "Смотрели ли вы аниме?", reply_markup=keyboard3)
-        else: 
+        else:
             await message.reply("Введите ваш возраст в виде целого положительного числа")
     elif state_user[user_id] == 4:
         text = message.text
@@ -400,7 +391,8 @@ async def process_states(message):
         ind = ls[0][3]
         print(df["anime_id"][ind], df["English name"][ind], df["Image URL"][ind])
         cur_anime[user_id] = ind
-        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы имели ввиду:{name[cur_anime[user_id]]}?', reply_markup=keyboard3)
+        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы имели ввиду:{name[cur_anime[user_id]]}?',
+                             reply_markup=keyboard3)
         state_user[user_id] = 6
     elif state_user[user_id] == 5 or state_user[user_id] == 10:
         text = message.text
@@ -409,35 +401,42 @@ async def process_states(message):
             if int(text) != 0:
                 await bot.send_message(user_id, f'Отлично! вы оценили {name[cur_anime[user_id]]} на {text}')
             if state_user[user_id] == 5:
-                await bot.send_message(user_id, f'Просим дальше писать названия аниме и их оценку', reply_markup=keyboard2)
+                await bot.send_message(user_id, f'Просим дальше писать названия аниме и их оценку',
+                                       reply_markup=keyboard2)
                 state_user[user_id] = 4
             elif state_user[user_id] == 10:
                 if int(text) != 0:
-                    await bot.send_message(user_id, f'{name[cur_anime[user_id]]} успешно добавлено в список просмотренных с оценкой {text}')
+                    await bot.send_message(user_id,
+                                           f'{name[cur_anime[user_id]]} успешно добавлено в список просмотренных с оценкой {text}')
                 else:
-                    await bot.send_message(user_id, f'{name[cur_anime[user_id]]} успешно добавлено в список просмотренных')
-                state_user[user_id] = 1 
+                    await bot.send_message(user_id,
+                                           f'{name[cur_anime[user_id]]} успешно добавлено в список просмотренных')
+                state_user[user_id] = 1
             cur_anime[user_id] = -1
         else:
-            await bot.send_message(user_id, f'Пожалуйста оцените аниме {name[cur_anime[user_id]]} от 1 до 10\nВведите 0 если не хотите оценивать сейчас')
+            await bot.send_message(user_id,
+                                   f'Пожалуйста оцените аниме {name[cur_anime[user_id]]} от 1 до 10\nВведите 0 если не хотите оценивать сейчас')
     elif state_user[user_id] == 8:
         ls = await find_closest_name(message.text)
         ind = ls[0][3]
         state_user[user_id] = 9
         cur_anime[user_id] = ind
         cur_ls[user_id] = ls[0:5]
-        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы имели ввиду:{name[cur_anime[user_id]]}?', reply_markup=keyboard3)
+        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы имели ввиду:{name[cur_anime[user_id]]}?',
+                             reply_markup=keyboard3)
     elif state_user[user_id] == 14:
         ls = await find_closest_name(message.text)
         ind = ls[0][3]
         state_user[user_id] = 15
         cur_anime[user_id] = ind
         cur_ls[user_id] = ls[0:5]
-        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы имели ввиду:{name[cur_anime[user_id]]}?', reply_markup=keyboard3)
+        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы имели ввиду:{name[cur_anime[user_id]]}?',
+                             reply_markup=keyboard3)
     elif state_user[user_id] != 1:
         await bot.delete_message(message.chat.id, message.message_id)
     else:
         await bot.send_message(user_id, 'Просим вас использовать команды\n/help')
+
 
 @dp.callback_query(lambda c: c.data.startswith('choice'))
 async def process_callback_choice(callback_query: types.CallbackQuery):
@@ -447,28 +446,28 @@ async def process_callback_choice(callback_query: types.CallbackQuery):
     if state_user[user_id] == 13:
         ind = int(callback_query.data[callback_query.data.find(":") + 1:])
         tip = text(f'Вы выбрали:{name[ind]}\nОтличный выбор! Добавим в список смотрю сейчас',
-                f'\n\nЖанры:{df["Genres"][ind]}', 
-                f'\n\nВозрастной рейтинг: {df["Rating"][ind]}',
-                f'\n\nРейтинг: {df["Score"][ind]}', 
-                f'\n\nПродюссер: {df["Producers"][ind]}',
-                f'\n\nОписание: {df["Synopsis"][ind][0:min(145, len(df["Synopsis"][ind]))]}...'
-        )
+                   f'\n\nЖанры:{df["Genres"][ind]}',
+                   f'\n\nВозрастной рейтинг: {df["Rating"][ind]}',
+                   f'\n\nРейтинг: {df["Score"][ind]}',
+                   f'\n\nПродюссер: {df["Producers"][ind]}',
+                   f'\n\nОписание: {df["Synopsis"][ind][0:min(145, len(df["Synopsis"][ind]))]}...'
+                   )
         await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=tip)
         user_watching[user_id].append(ind)
         state_user[user_id] = 1
     elif state_user[user_id] == 16:
         ind = int(callback_query.data[callback_query.data.find(":") + 1:])
-        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы выбрали:{name[ind]}\nПросим оценить от 1 до 10\nВведите 0 если не хотите оценивать сейчас')
+        await bot.send_photo(user_id, photo=df["Image URL"][ind],
+                             caption=f'Вы выбрали:{name[ind]}\nПросим оценить от 1 до 10\nВведите 0 если не хотите оценивать сейчас')
         cur_anime[user_id] = ind
         state_user[user_id] = 10
     elif state_user[user_id] == 17:
         ind = int(callback_query.data[callback_query.data.find(":") + 1:])
-        await bot.send_photo(user_id, photo=df["Image URL"][ind], caption=f'Вы добавили:{name[ind]} в список смотрю сейчас')
+        await bot.send_photo(user_id, photo=df["Image URL"][ind],
+                             caption=f'Вы добавили:{name[ind]} в список смотрю сейчас')
         cur_anime[user_id] = ind
         user_watching[user_id].append(ind)
         state_user[user_id] = 1
-
-        
 
 
 @dp.callback_query(lambda c: c.data == 'yes')
@@ -477,7 +476,7 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
     print(user_id)
     if state_user[user_id] == 3:
         tip = text(
-            "Отлично!", 
+            "Отлично!",
             "\nВ таком случае попросим Вас название одного из аниме, которые Вы смотрели",
             "\nЧем больше мы узнаем, тем легче нам будет подобрать аниме под Вас"
         )
@@ -487,11 +486,13 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
         await bot.send_message(user_id, tip, reply_markup=keyboard2)
         state_user[user_id] = 4
     elif state_user[user_id] == 6:
-        await bot.send_message(user_id, "Отлично, теперь просим оценить данное аниме от 1 до 10\nВведите 0 если не хотите оценивать сейчас")
+        await bot.send_message(user_id,
+                               "Отлично, теперь просим оценить данное аниме от 1 до 10\nВведите 0 если не хотите оценивать сейчас")
         state_user[user_id] = 5
     elif state_user[user_id] == 9:
-       await bot.send_message(user_id, "Отлично, теперь просим оценить данное аниме от 1 до 10\nВведите 0 если не хотите оценивать сейчас")
-       state_user[user_id] = 10
+        await bot.send_message(user_id,
+                               "Отлично, теперь просим оценить данное аниме от 1 до 10\nВведите 0 если не хотите оценивать сейчас")
+        state_user[user_id] = 10
     elif state_user[user_id] == 11:
         await bot.send_message(user_id, "Тогда просим вводить названия аниме дальше")
         state_user[user_id] = 8
@@ -514,7 +515,7 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
         await bot.delete_message(callback_query.message.chat.id, callback_query.message.message_id)
         await bot.send_message(user_id, "Вы сбросили информацию о себе:(")
         state_user[user_id] = 1
-        user_info[user_id] = dict() 
+        user_info[user_id] = dict()
         user_rate_anime[user_id] = dict()
         user_watching[user_id] = list()
         cur_anime[user_id] = -1
@@ -528,7 +529,7 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
     if state_user[user_id] == 3:
         tip = text(
-            "Очень жаль:(", 
+            "Очень жаль:(",
             "\nВ таком случае подбор аниме будет сложнее"
         )
         user_info[user_id]['watched_anime'] = False
@@ -548,7 +549,7 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
             inline_list.append([InlineKeyboardButton(text=name[ls[i][3]], callback_data=f'choice:{ls[i][3]}')])
         inline_list.append([InlineKeyboardButton(text="Нет ничего подходящего", callback_data="cancel")])
         keyboard = InlineKeyboardMarkup(inline_keyboard=inline_list)
-        state_user[user_id] = 16  
+        state_user[user_id] = 16
         await bot.send_message(user_id, "Может быть вы имели ввиду что-нибудь из этого?", reply_markup=keyboard)
     elif state_user[user_id] == 11:
         await bot.send_message(user_id, "Вы перестали добавлять аниме")
@@ -560,7 +561,7 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
         for i in range(1, 4):
             inline_list.append([InlineKeyboardButton(text=name[ls[i]], callback_data=f'choice:{ls[i]}')])
         inline_list.append([InlineKeyboardButton(text="Нет ничего подходящего", callback_data="cancel")])
-        keyboard = InlineKeyboardMarkup(inline_keyboard=inline_list)  
+        keyboard = InlineKeyboardMarkup(inline_keyboard=inline_list)
         await bot.send_message(user_id, "Может вас устроит что-нибудь из этого?", reply_markup=keyboard)
         state_user[user_id] = 13
     elif state_user[user_id] == 15:
@@ -569,7 +570,7 @@ async def process_callback_fill_button(callback_query: types.CallbackQuery):
         for i in range(1, 4):
             inline_list.append([InlineKeyboardButton(text=name[ls[i][3]], callback_data=f'choice:{ls[i][3]}')])
         inline_list.append([InlineKeyboardButton(text="Нет ничего подходящего", callback_data="cancel")])
-        keyboard = InlineKeyboardMarkup(inline_keyboard=inline_list)  
+        keyboard = InlineKeyboardMarkup(inline_keyboard=inline_list)
         await bot.send_message(user_id, "Может вас устроит что-нибудь из этого?", reply_markup=keyboard)
         state_user[user_id] = 17
     elif state_user[user_id] == 18:
@@ -600,9 +601,10 @@ async def process_callback_stop_button(callback_query: types.CallbackQuery):
     elif state_user[user_id] == 17:
         await bot.send_message(user_id, "Значит мы не смогли понять вас")
         state_user[user_id] = 1
-    
 
 
 if __name__ == '__main__':
     print("Started bot")
     dp.run_polling(bot)
+
+atexit.register(data_manager.save_data)
