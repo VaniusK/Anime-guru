@@ -41,6 +41,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram import F
 from random import randint
 
+import data_manager
 import config
 from llm import LLM
 import data_manager
