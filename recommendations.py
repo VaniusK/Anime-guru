@@ -10,7 +10,7 @@ def get_recommendations(user_id: int, request: str) -> List[int]:
         users_watched_anime[user_id] = {}
     user_preferences = users_watched_anime[user_id]
     anime_lists = [
-        get_content_based_recommendations(user_preferences, 5, 30)
+        get_content_based_recommendations(user_preferences, 5, 10)
     ]
     return anime_utils.merge_anime_based_on_request(anime_lists, request, user_id)[:100]
 
